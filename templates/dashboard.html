@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Thư viện Online{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard Quản trị</h2>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="bi bi-book-fill text-primary" style="font-size: 2.5rem;"></i>
+                <h3 class="mt-2 mb-0">{{ total_books }}</h3>
+                <p class="text-muted mb-0">Đầu sách</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="bi bi-stack text-success" style="font-size: 2.5rem;"></i>
+                <h3 class="mt-2 mb-0">{{ total_quantity }}</h3>
+                <p class="text-muted mb-0">Tổng số sách</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="bi bi-bookmark-check-fill text-warning" style="font-size: 2.5rem;"></i>
+                <h3 class="mt-2 mb-0">{{ total_borrowed }}</h3>
+                <p class="text-muted mb-0">Đang được mượn</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 2.5rem;"></i>
+                <h3 class="mt-2 mb-0">{{ overdue_records|length }}</h3>
+                <p class="text-muted mb-0">Quá hạn</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-trophy-fill"></i> Top 5 sách được mượn nhiều</h5>
+            </div>
+            <div class="card-body">
+                {% if popular_books %}
+                <div class="list-group list-group-flush">
+                    {% for book, count in popular_books %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ book.title }}</strong>
+                            <br>
+                            <small class="text-muted">{{ book.author }}</small>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">{{ count }} lượt</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Chưa có dữ liệu</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-people-fill"></i> Top 5 độc giả tích cực</h5>
+            </div>
+            <div class="card-body">
+                {% if active_readers %}
+                <div class="list-group list-group-flush">
+                    {% for user, count in active_readers %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-person-circle"></i>
+                            <strong>{{ user.username }}</strong>
+                        </div>
+                        <span class="badge bg-success rounded-pill">{{ count }} lượt</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Chưa có dữ liệu</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if overdue_records %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Sách quá hạn ({{ overdue_records|length }})</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Người mượn</th>
+                        <th>Tên sách</th>
+                        <th>Ngày mượn</th>
+                        <th>Hạn trả</th>
+                        <th>Số ngày trễ</th>
+                        <th>Phí phạt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in overdue_records %}
+                    <tr>
+                        <td>{{ record.user.username }}</td>
+                        <td><strong>{{ record.book.title }}</strong></td>
+                        <td>{{ record.borrow_date.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ record.due_date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <span class="badge bg-danger">
+                                {{ (record.borrow_date.utcnow() - record.due_date).days }} ngày
+                            </span>
+                        </td>
+                        <td class="text-danger fw-bold">{{ "{:,}".format(record.late_fee) }} VNĐ</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

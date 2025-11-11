@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Mượn sách - Thư viện Online{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-bookmark-plus"></i> Mượn sách
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                {% if form.book_id.choices %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> 
+                    Thời hạn mượn sách: <strong>14 ngày</strong><br>
+                    Phí phạt trễ hạn: <strong>5.000 VNĐ/ngày</strong>
+                </div>
+                
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-4">
+                        {{ form.book_id.label(class="form-label") }}
+                        {{ form.book_id(class="form-select form-select-lg") }}
+                        {% if form.book_id.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.book_id.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-success btn-lg") }}
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    Hiện tại không có sách nào có sẵn để mượn.
+                </div>
+                <a href="{{ url_for('books') }}" class="btn btn-primary">
+                    <i class="bi bi-book-half"></i> Xem danh sách sách
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> Hướng dẫn</h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li>Chọn sách bạn muốn mượn từ danh sách</li>
+                    <li>Nhấn nút "Mượn sách"</li>
+                    <li>Hệ thống sẽ tự động tính hạn trả sau 14 ngày</li>
+                    <li>Bạn có thể xem và quản lý sách đã mượn tại mục "Sách của tôi"</li>
+                    <li>Nhớ trả sách đúng hạn để tránh bị phạt!</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Sách của tôi - Thư viện Online{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-list-check"></i> Sách của tôi</h2>
+
+{% if records %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>STT</th>
+                <th>Tên sách</th>
+                <th>Tác giả</th>
+                <th>Ngày mượn</th>
+                <th>Hạn trả</th>
+                <th>Ngày trả</th>
+                <th>Phí phạt</th>
+                <th>Trạng thái</th>
+                <th class="text-center">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+            <tr {% if record.is_overdue() %}class="table-danger"{% endif %}>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ record.book.title }}</strong></td>
+                <td>{{ record.book.author }}</td>
+                <td>{{ record.borrow_date.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    {{ record.due_date.strftime('%d/%m/%Y') }}
+                    {% if record.is_overdue() %}
+                    <span class="badge bg-danger">Quá hạn</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if record.return_date %}
+                    {{ record.return_date.strftime('%d/%m/%Y') }}
+                    {% else %}
+                    <span class="text-muted">Chưa trả</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if record.late_fee > 0 %}
+                    <span class="text-danger fw-bold">{{ "{:,}".format(record.late_fee) }} VNĐ</span>
+                    {% else %}
+                    <span class="text-success">0 VNĐ</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if record.status == 'borrowing' %}
+                    <span class="badge bg-warning">Đang mượn</span>
+                    {% else %}
+                    <span class="badge bg-success">Đã trả</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if record.status == 'borrowing' %}
+                    <a href="{{ url_for('return_book', id=record.id) }}" 
+                       class="btn btn-sm btn-success"
+                       onclick="return confirm('Xác nhận trả sách?')">
+                        <i class="bi bi-check-circle"></i> Trả sách
+                    </a>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% set active_borrows = records|selectattr('status', 'equalto', 'borrowing')|list %}
+{% if active_borrows %}
+<div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle"></i> 
+    Bạn đang mượn <strong>{{ active_borrows|length }}</strong> quyển sách.
+</div>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Bạn chưa mượn sách nào.
+    <a href="{{ url_for('borrow') }}" class="alert-link">Mượn sách ngay</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Danh sách sách - Thư viện Online{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-book-half"></i> Danh sách sách</h2>
+    {% if current_user.is_authenticated and current_user.is_admin() %}
+    <a href="{{ url_for('add_book') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Thêm sách mới
+    </a>
+    {% endif %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="GET" action="{{ url_for('books') }}" class="d-flex">
+            <input type="text" name="search" class="form-control me-2" 
+                   placeholder="Tìm kiếm theo tên sách hoặc tác giả..." 
+                   value="{{ search }}">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Tìm
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if books %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>STT</th>
+                <th>Tên sách</th>
+                <th>Tác giả</th>
+                <th>Thể loại</th>
+                <th class="text-center">Tổng số</th>
+                <th class="text-center">Còn lại</th>
+                <th class="text-center">Trạng thái</th>
+                {% if current_user.is_authenticated and current_user.is_admin() %}
+                <th class="text-center">Thao tác</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for book in books %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ book.title }}</strong></td>
+                <td>{{ book.author }}</td>
+                <td><span class="badge bg-secondary">{{ book.category }}</span></td>
+                <td class="text-center">{{ book.quantity }}</td>
+                <td class="text-center">
+                    <span class="badge {% if book.available > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ book.available }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    {% if book.available > 0 %}
+                    <span class="badge bg-success">Có sẵn</span>
+                    {% else %}
+                    <span class="badge bg-danger">Hết sách</span>
+                    {% endif %}
+                </td>
+                {% if current_user.is_authenticated and current_user.is_admin() %}
+                <td class="text-center">
+                    <a href="{{ url_for('edit_book', id=book.id) }}" class="btn btn-sm btn-warning">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{{ url_for('delete_book', id=book.id) }}" 
+                       class="btn btn-sm btn-danger"
+                       onclick="return confirm('Bạn có chắc muốn xóa sách này?')">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Không tìm thấy sách nào
+    {% if search %}
+    với từ khóa "<strong>{{ search }}</strong>"
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

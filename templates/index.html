@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Trang chủ - Thư viện Online{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h1 class="display-4 mb-3">
+        <i class="bi bi-book text-primary"></i> Chào mừng đến Thư viện Online
+    </h1>
+    <p class="lead text-muted">Hệ thống quản lý mượn/trả sách hiện đại và tiện lợi</p>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-primary">
+            <div class="card-body">
+                <i class="bi bi-book-fill text-primary" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Tìm sách</h5>
+                <p class="card-text">Dễ dàng tìm kiếm sách theo tên, tác giả hoặc thể loại</p>
+                <a href="{{ url_for('books') }}" class="btn btn-primary">Xem sách</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-success">
+            <div class="card-body">
+                <i class="bi bi-bookmark-plus-fill text-success" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Mượn sách</h5>
+                <p class="card-text">Mượn sách online chỉ với vài cú click đơn giản</p>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('borrow') }}" class="btn btn-success">Mượn ngay</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-success">Đăng nhập</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center h-100 border-info">
+            <div class="card-body">
+                <i class="bi bi-list-check text-info" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Quản lý</h5>
+                <p class="card-text">Theo dõi lịch sử mượn/trả và hạn trả sách của bạn</p>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('my_borrows') }}" class="btn btn-info">Xem chi tiết</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-info">Đăng nhập</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3><i class="bi bi-star-fill text-warning"></i> Sách mới nhất</h3>
+        <a href="{{ url_for('books') }}" class="btn btn-outline-primary btn-sm">Xem tất cả</a>
+    </div>
+    <div class="row g-3">
+        {% for book in books %}
+        <div class="col-md-4 col-lg-2">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-title">{{ book.title }}</h6>
+                    <p class="card-text small text-muted mb-2">{{ book.author }}</p>
+                    <span class="badge bg-secondary">{{ book.category }}</span>
+                    {% if book.available > 0 %}
+                    <span class="badge bg-success">Còn {{ book.available }}</span>
+                    {% else %}
+                    <span class="badge bg-danger">Hết sách</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if not current_user.is_authenticated %}
+<div class="alert alert-info text-center">
+    <i class="bi bi-info-circle"></i> 
+    <strong>Thông tin đăng nhập:</strong><br>
+    Admin - Username: <code>admin</code>, Password: <code>admin123</code><br>
+    User - Username: <code>user</code>, Password: <code>user123</code>
+</div>
+{% endif %}
+{% endblock %}
