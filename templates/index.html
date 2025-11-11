@@ -59,15 +59,39 @@
     <div class="row g-3">
         {% for book in books %}
         <div class="col-md-4 col-lg-2">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h6 class="card-title">{{ book.title }}</h6>
-                    <p class="card-text small text-muted mb-2">{{ book.author }}</p>
-                    <span class="badge bg-secondary">{{ book.category }}</span>
-                    {% if book.available > 0 %}
-                    <span class="badge bg-success">Còn {{ book.available }}</span>
+            <div class="card h-100 shadow-sm">
+                <a href="{{ url_for('book_detail', id=book.id) }}" class="text-decoration-none">
+                    {% if book.image_url %}
+                        <img src="{{ url_for('static', filename=book.image_url) if not book.image_url.startswith('http') else book.image_url }}" 
+                             class="card-img-top" 
+                             alt="{{ book.title }}"
+                             style="height: 200px; object-fit: cover;">
                     {% else %}
-                    <span class="badge bg-danger">Hết sách</span>
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                             style="height: 200px;">
+                            <i class="bi bi-book" style="font-size: 50px; color: #ccc;"></i>
+                        </div>
+                    {% endif %}
+                </a>
+                <div class="card-body p-2">
+                    <h6 class="card-title small mb-1">
+                        <a href="{{ url_for('book_detail', id=book.id) }}" class="text-decoration-none text-dark">
+                            {{ book.title }}
+                        </a>
+                    </h6>
+                    <p class="card-text small text-muted mb-2">{{ book.author }}</p>
+                    <div>
+                        <span class="badge bg-secondary">{{ book.category }}</span>
+                        {% if book.available > 0 %}
+                        <span class="badge bg-success">Còn {{ book.available }}</span>
+                        {% else %}
+                        <span class="badge bg-danger">Hết sách</span>
+                        {% endif %}
+                    </div>
+                    {% if book.total_ratings > 0 %}
+                    <small class="text-warning">
+                        ⭐ {{ book.average_rating }}
+                    </small>
                     {% endif %}
                 </div>
             </div>

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} - Thư viện Online{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow">
+            {% if book.image_url %}
+                <img src="{{ url_for('static', filename=book.image_url) if not book.image_url.startswith('http') else book.image_url }}" 
+                     class="card-img-top" 
+                     alt="{{ book.title }}"
+                     style="height: 500px; object-fit: cover;">
+            {% else %}
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                     style="height: 500px;">
+                    <i class="bi bi-book" style="font-size: 100px; color: #ccc;"></i>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h2>{{ book.title }}</h2>
+                <p class="text-muted mb-2">
+                    <i class="bi bi-person"></i> {{ book.author }}
+                </p>
+                <span class="badge bg-secondary">{{ book.category }}</span>
+            </div>
+            {% if current_user.is_authenticated and current_user.is_admin() %}
+            <div>
+                <a href="{{ url_for('edit_book', id=book.id) }}" class="btn btn-warning btn-sm">
+                    <i class="bi bi-pencil"></i> Sửa
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h4 class="text-primary">{{ book.quantity }}</h4>
+                        <small class="text-muted">Tổng số</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="{% if book.available > 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ book.available }}
+                        </h4>
+                        <small class="text-muted">Còn lại</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-warning">
+                            {{ book.average_rating }}
+                            <i class="bi bi-star-fill"></i>
+                        </h4>
+                        <small class="text-muted">Đánh giá ({{ book.total_ratings }})</small>
+                    </div>
+                    <div class="col-md-3">
+                        {% if book.available > 0 %}
+                            <span class="badge bg-success fs-6">Có sẵn</span>
+                        {% else %}
+                            <span class="badge bg-danger fs-6">Hết sách</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if book.description %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Mô tả</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{ book.description }}</p>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="d-flex gap-2 mb-4">
+            {% if current_user.is_authenticated %}
+                {% if book.available > 0 %}
+                <a href="{{ url_for('borrow') }}" class="btn btn-success btn-lg">
+                    <i class="bi bi-bookmark-plus"></i> Mượn sách này
+                </a>
+                {% endif %}
+                
+                {% if user_borrowed %}
+                <a href="{{ url_for('rate_book', id=book.id) }}" class="btn btn-warning btn-lg">
+                    <i class="bi bi-star"></i> Đánh giá
+                </a>
+                {% endif %}
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-box-arrow-in-right"></i> Đăng nhập để mượn
+                </a>
+            {% endif %}
+            
+            <a href="{{ url_for('books') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+        </div>
+        
+        {% if reviews %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-chat-left-text"></i> Đánh giá từ độc giả</h5>
+            </div>
+            <div class="card-body">
+                {% for review in reviews %}
+                <div class="mb-3 pb-3 {% if not loop.last %}border-bottom{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>
+                                <i class="bi bi-person-circle"></i> {{ review.user.username }}
+                            </strong>
+                            <span class="text-warning ms-2">
+                                {% for i in range(review.rating) %}⭐{% endfor %}
+                            </span>
+                        </div>
+                        <small class="text-muted">
+                            {{ review.return_date.strftime('%d/%m/%Y') }}
+                        </small>
+                    </div>
+                    {% if review.review %}
+                    <p class="mt-2 mb-0">{{ review.review }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

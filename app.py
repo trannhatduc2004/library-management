@@ -1,13 +1,19 @@
+# -*- coding: utf-8 -*-
 from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.utils import secure_filename
 from config import Config
 from models import db, User, Book, BorrowRecord
-from forms import LoginForm, BookForm, BorrowForm
+from forms import LoginForm, BookForm, BorrowForm, RatingForm
 from datetime import datetime, timedelta
 from functools import wraps
 import os
+
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Tạo thư mục upload nếu chưa có
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -29,6 +35,11 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Helper function: Kiểm tra file được phép
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
 # Khởi tạo database và dữ liệu mẫu
 def init_database():
     with app.app_context():
@@ -49,11 +60,26 @@ def init_database():
         # Thêm sách mẫu nếu chưa có
         if Book.query.count() == 0:
             sample_books = [
-                Book(title='Đắc Nhân Tâm', author='Dale Carnegie', category='Văn học', quantity=5, available=5),
-                Book(title='Sapiens', author='Yuval Noah Harari', category='Lịch sử', quantity=3, available=3),
-                Book(title='Tuổi Trẻ Đáng Giá Bao Nhiêu', author='Rosie Nguyễn', category='Văn học', quantity=4, available=4),
-                Book(title='Nhà Giả Kim', author='Paulo Coelho', category='Văn học', quantity=6, available=6),
-                Book(title='Tôi Tài Giỏi Bạn Cũng Thế', author='Adam Khoo', category='Kinh tế', quantity=3, available=3),
+                Book(title='Đắc Nhân Tâm', author='Dale Carnegie', category='Kỹ năng sống', 
+                     description='Cuốn sách nổi tiếng về nghệ thuật giao tiếp và ứng xử',
+                     image_url='https://salt.tikicdn.com/cache/750x750/ts/product/2e/25/6c/0e5e1ead0fd82236a23adb4f9e5e99b1.jpg.webp',
+                     quantity=5, available=5),
+                Book(title='Sapiens', author='Yuval Noah Harari', category='Lịch sử',
+                     description='Lược sử loài người từ thời kỳ đồ đá đến nay',
+                     image_url='https://salt.tikicdn.com/cache/750x750/ts/product/5e/18/24/2a6154ba08df6ce6161c13f4303fa19e.jpg.webp',
+                     quantity=3, available=3),
+                Book(title='Tuổi Trẻ Đáng Giá Bao Nhiêu', author='Rosie Nguyễn', category='Kỹ năng sống',
+                     description='Dành cho những người trẻ đang tìm kiếm định hướng',
+                     image_url='https://salt.tikicdn.com/cache/750x750/ts/product/46/08/f1/6c5cea81c557e5a97b007b800e5c483c.jpg.webp',
+                     quantity=4, available=4),
+                Book(title='Nhà Giả Kim', author='Paulo Coelho', category='Văn học',
+                     description='Chuyến hành trình tìm kiếm kho báu và ý nghĩa cuộc đời',
+                     image_url='https://salt.tikicdn.com/cache/750x750/ts/product/5e/d6/f8/107c6f87a786c45cb6e0940c52e8f6b5.jpg.webp',
+                     quantity=6, available=6),
+                Book(title='Tôi Tài Giỏi Bạn Cũng Thế', author='Adam Khoo', category='Kỹ năng sống',
+                     description='Phương pháp học tập hiệu quả từ chuyên gia',
+                     image_url='https://salt.tikicdn.com/cache/750x750/ts/product/d0/86/d7/7d1a42f6d0f92e65c6ebd32a04c53c2e.jpg.webp',
+                     quantity=3, available=3),
             ]
             for book in sample_books:
                 db.session.add(book)
@@ -94,11 +120,88 @@ def logout():
 @app.route('/books')
 def books():
     search = request.args.get('search', '')
+    category = request.args.get('category', '')
+    
+    query = Book.query
+    
     if search:
-        books = Book.query.filter(Book.title.contains(search) | Book.author.contains(search)).all()
-    else:
-        books = Book.query.all()
-    return render_template('books.html', books=books, search=search)
+        query = query.filter(Book.title.contains(search) | Book.author.contains(search))
+    
+    if category:
+        query = query.filter_by(category=category)
+    
+    books = query.all()
+    
+    # Lấy danh sách thể loại
+    categories = db.session.query(Book.category).distinct().all()
+    categories = [c[0] for c in categories if c[0]]
+    
+    return render_template('books.html', books=books, search=search, 
+                         category=category, categories=categories)
+
+@app.route('/book/<int:id>')
+def book_detail(id):
+    book = Book.query.get_or_404(id)
+    
+    # Lấy các review
+    reviews = BorrowRecord.query.filter_by(book_id=id).filter(
+        BorrowRecord.rating.isnot(None)
+    ).order_by(BorrowRecord.return_date.desc()).limit(10).all()
+    
+    # Kiểm tra user đã mượn sách này chưa (để hiển thị form rating)
+    user_borrowed = False
+    if current_user.is_authenticated:
+        user_borrowed = BorrowRecord.query.filter_by(
+            book_id=id, 
+            user_id=current_user.id,
+            status='returned'
+        ).first() is not None
+    
+    return render_template('book_detail.html', book=book, reviews=reviews, 
+                         user_borrowed=user_borrowed)
+
+@app.route('/book/<int:id>/rate', methods=['GET', 'POST'])
+@login_required
+def rate_book(id):
+    book = Book.query.get_or_404(id)
+    
+    # Kiểm tra user đã mượn và trả sách này chưa
+    borrow_record = BorrowRecord.query.filter_by(
+        book_id=id,
+        user_id=current_user.id,
+        status='returned'
+    ).first()
+    
+    if not borrow_record:
+        flash('Bạn chỉ có thể đánh giá sách đã mượn và trả!', 'warning')
+        return redirect(url_for('book_detail', id=id))
+    
+    form = RatingForm()
+    
+    if form.validate_on_submit():
+        # Nếu đã đánh giá rồi thì cập nhật
+        if borrow_record.rating:
+            # Trừ rating cũ
+            book.sum_ratings -= borrow_record.rating
+            book.total_ratings -= 1
+        
+        # Thêm rating mới
+        borrow_record.rating = form.rating.data
+        borrow_record.review = form.review.data
+        
+        book.sum_ratings += form.rating.data
+        book.total_ratings += 1
+        
+        db.session.commit()
+        flash('Đã gửi đánh giá thành công!', 'success')
+        return redirect(url_for('book_detail', id=id))
+    
+    # Pre-fill nếu đã có rating
+    if borrow_record.rating:
+        form.rating.data = borrow_record.rating
+        form.review.data = borrow_record.review
+    
+    return render_template('rate_book.html', form=form, book=book)
 
 @app.route('/books/add', methods=['GET', 'POST'])
 @login_required
@@ -106,10 +209,29 @@ def books():
 def add_book():
     form = BookForm()
     if form.validate_on_submit():
+        image_path = None
+        
+        # Xử lý upload file
+        if form.image.data:
+            file = form.image.data
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                # Thêm timestamp để tránh trùng tên
+                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                image_path = f'uploads/books/{filename}'
+        
+        # Nếu không upload file thì dùng URL
+        if not image_path and form.image_url.data:
+            image_path = form.image_url.data
+        
         book = Book(
             title=form.title.data,
             author=form.author.data,
             category=form.category.data,
+            description=form.description.data,
+            image_url=image_path,
             quantity=form.quantity.data,
             available=form.quantity.data
         )
@@ -130,6 +252,19 @@ def edit_book(id):
         book.title = form.title.data
         book.author = form.author.data
         book.category = form.category.data
+        book.description = form.description.data
+        
+        # Xử lý upload ảnh mới
+        if form.image.data:
+            file = form.image.data
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                book.image_url = f'uploads/books/{filename}'
+        elif form.image_url.data:
+            book.image_url = form.image_url.data
         
         # Cập nhật số lượng có sẵn theo tỷ lệ
         old_quantity = book.quantity
@@ -292,8 +427,6 @@ def all_borrows():
             record.calculate_late_fee(app.config['LATE_FEE_PER_DAY'])
     
     return render_template('all_borrows.html', records=records)
-
-# Thêm vào cuối file app.py, thay thế phần if __name__ == '__main__':
 
 if __name__ == '__main__':
     # Only initialize database in development

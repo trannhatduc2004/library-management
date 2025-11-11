@@ -6,6 +6,30 @@
 <h2 class="mb-4"><i class="bi bi-list-check"></i> Sách của tôi</h2>
 
 {% if records %}
+<!-- Thông báo sắp đến hạn -->
+{% set due_soon = [] %}
+{% for record in records %}
+    {% if record.status == 'borrowing' and record.days_until_due() is not none and record.days_until_due() <= 3 and record.days_until_due() >= 0 %}
+        {% set _ = due_soon.append(record) %}
+    {% endif %}
+{% endfor %}
+
+{% if due_soon %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Cảnh báo: Sắp đến hạn trả sách!</h5>
+    <p class="mb-0">Bạn có <strong>{{ due_soon|length }}</strong> quyển sách sắp đến hạn trong 3 ngày tới:</p>
+    <ul class="mt-2 mb-0">
+        {% for record in due_soon %}
+        <li>
+            <strong>{{ record.book.title }}</strong> - 
+            Còn <span class="badge bg-danger">{{ record.days_until_due() }} ngày</span>
+        </li>
+        {% endfor %}
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
 <div class="table-responsive">
     <table class="table table-hover">
         <thead class="table-light">
@@ -23,15 +47,21 @@
         </thead>
         <tbody>
             {% for record in records %}
-            <tr {% if record.is_overdue() %}class="table-danger"{% endif %}>
+            <tr {% if record.is_overdue() %}class="table-danger"{% elif record.status == 'borrowing' and record.days_until_due() <= 3 %}class="table-warning"{% endif %}>
                 <td>{{ loop.index }}</td>
-                <td><strong>{{ record.book.title }}</strong></td>
+                <td>
+                    <a href="{{ url_for('book_detail', id=record.book.id) }}" class="text-decoration-none">
+                        <strong>{{ record.book.title }}</strong>
+                    </a>
+                </td>
                 <td>{{ record.book.author }}</td>
                 <td>{{ record.borrow_date.strftime('%d/%m/%Y') }}</td>
                 <td>
                     {{ record.due_date.strftime('%d/%m/%Y') }}
                     {% if record.is_overdue() %}
                     <span class="badge bg-danger">Quá hạn</span>
+                    {% elif record.status == 'borrowing' and record.days_until_due() <= 3 %}
+                    <span class="badge bg-warning text-dark">Còn {{ record.days_until_due() }} ngày</span>
                     {% endif %}
                 </td>
                 <td>
@@ -53,6 +83,12 @@
                     <span class="badge bg-warning">Đang mượn</span>
                     {% else %}
                     <span class="badge bg-success">Đã trả</span>
+                    {% if not record.rating %}
+                    <a href="{{ url_for('rate_book', id=record.book.id) }}" 
+                       class="badge bg-info text-decoration-none">
+                        <i class="bi bi-star"></i> Đánh giá
+                    </a>
+                    {% endif %}
                     {% endif %}
                 </td>
                 <td class="text-center">
